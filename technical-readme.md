@@ -1,4 +1,4 @@
-# AarogyaAI Technical Documentation
+# AarogyaAI Technical Documentation.
 
 ## 🎯 Features Overview
 
