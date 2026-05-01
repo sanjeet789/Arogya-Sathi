@@ -44,15 +44,19 @@ type AppointmentDetails = {
 type AppointmentDetailsModalProps = {
   appointmentId: string | null;
   onClose: () => void;
+  onDeleted?: () => void;
 };
 
-export default function AppointmentDetailsModal({ appointmentId, onClose }: AppointmentDetailsModalProps) {
+export default function AppointmentDetailsModal({ appointmentId, onClose, onDeleted }: AppointmentDetailsModalProps) {
   const [appointment, setAppointment] = useState<AppointmentDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [medicalTests, setMedicalTests] = useState<MedicalTest[]>([]);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedTestId, setSelectedTestId] = useState<string | undefined>();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (appointmentId) {
@@ -75,7 +79,7 @@ export default function AppointmentDetailsModal({ appointmentId, onClose }: Appo
 
   const fetchAppointmentDetails = async () => {
     if (!appointmentId) return;
-    
+
     setLoading(true);
     setError(null);
     try {
@@ -87,7 +91,7 @@ export default function AppointmentDetailsModal({ appointmentId, onClose }: Appo
         const BACKEND_BASE = process.env.NEXT_PUBLIC_STT_BACKEND_URL || "http://localhost:8080";
         try {
           const paymentResponse = await fetch(`${BACKEND_BASE}/appointment/${appointmentId}/payment`);
-          
+
           if (paymentResponse.ok) {
             const paymentData = await paymentResponse.json();
             if (paymentData.appointment) {
@@ -107,7 +111,7 @@ export default function AppointmentDetailsModal({ appointmentId, onClose }: Appo
         } catch (paymentErr) {
           console.log("Payment information not available:", paymentErr);
         }
-        
+
         setAppointment(data);
       } else {
         setError(data.error || "Failed to load appointment details");
@@ -160,6 +164,28 @@ export default function AppointmentDetailsModal({ appointmentId, onClose }: Appo
     setSelectedTestId(undefined);
   };
 
+  const handleDeleteAppointment = async () => {
+    if (!appointmentId) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/appointments?id=${encodeURIComponent(appointmentId)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        if (onDeleted) onDeleted();
+        onClose();
+      } else {
+        const data = await res.json();
+        setDeleteError(data.error || "Failed to delete appointment");
+      }
+    } catch {
+      setDeleteError("Failed to delete appointment");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (!appointmentId) return null;
 
   return (
@@ -168,15 +194,67 @@ export default function AppointmentDetailsModal({ appointmentId, onClose }: Appo
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/10">
           <h2 className="text-lg font-semibold">Appointment Details</h2>
-          <button
-            onClick={onClose}
-            className="text-white/60 hover:text-white transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Delete button */}
+            {appointment && (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="p-1.5 rounded text-white/50 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                title="Delete appointment"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="text-white/60 hover:text-white transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
+
+        {/* Delete confirmation banner */}
+        {showDeleteConfirm && (
+          <div className="px-4 py-3 bg-red-500/10 border-b border-red-500/20 flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium text-red-400">Delete this appointment?</div>
+              <div className="text-xs text-red-400/70 mt-0.5">This action cannot be undone. All related data will be removed.</div>
+            </div>
+            <div className="flex gap-2 ml-4">
+              <button
+                onClick={() => { setShowDeleteConfirm(false); setDeleteError(null); }}
+                className="px-3 py-1.5 text-xs border border-white/20 rounded hover:bg-white/5 transition-colors"
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAppointment}
+                disabled={deleting}
+                className="px-3 py-1.5 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {deleting && (
+                  <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                )}
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        )}
+        {deleteError && (
+          <div className="px-4 py-2 bg-red-500/10 border-b border-red-500/20 text-sm text-red-400 flex items-center justify-between">
+            <span>{deleteError}</span>
+            <button onClick={() => setDeleteError(null)} className="text-red-300 hover:text-white text-xs">✕</button>
+          </div>
+        )}
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
@@ -238,15 +316,15 @@ export default function AppointmentDetailsModal({ appointmentId, onClose }: Appo
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                     <h3 className="font-medium text-green-400">Video Consultation</h3>
                   </div>
-                  
+
                   {/* Google Meet Join Section */}
                   <div className="bg-white/5 p-4 rounded border border-white/10">
                     <div className="text-sm mb-3">Join your video consultation with Dr. {appointment.doctor.username}:</div>
-                    
+
                     {/* Join Button */}
                     <div className="flex items-center justify-center mb-3">
                       <a
-                        href="https://meet.google.com/gjv-yrwa-oop"
+                        href="https://meet.google.com/xqr-xwhj-uwr"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
@@ -257,12 +335,12 @@ export default function AppointmentDetailsModal({ appointmentId, onClose }: Appo
                         Join Video Call
                       </a>
                     </div>
-                    
+
                     {/* Meeting Info */}
                     <div className="bg-white/10 p-3 rounded border border-white/20">
                       <div className="text-xs opacity-70 mb-1">Meeting Link:</div>
                       <div className="text-sm font-mono break-all text-green-400">
-                        https://meet.google.com/gjv-yrwa-oop
+                        https://meet.google.com/xqr-xwhj-uwr
                       </div>
                       <div className="text-xs opacity-70 mt-2">
                         Click "Join Video Call" to open Google Meet in a new tab
@@ -279,13 +357,12 @@ export default function AppointmentDetailsModal({ appointmentId, onClose }: Appo
                   <div className="grid gap-3 md:grid-cols-2">
                     <div>
                       <div className="text-sm opacity-70">Payment Status</div>
-                      <div className={`text-xs px-2 py-1 rounded border inline-block ${
-                        appointment.payment.payment_status === 'COMPLETED' 
+                      <div className={`text-xs px-2 py-1 rounded border inline-block ${appointment.payment.payment_status === 'COMPLETED'
                           ? 'border-green-500/30 bg-green-500/10 text-green-400'
                           : appointment.payment.payment_status === 'PENDING'
-                          ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400'
-                          : 'border-red-500/30 bg-red-500/10 text-red-400'
-                      }`}>
+                            ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400'
+                            : 'border-red-500/30 bg-red-500/10 text-red-400'
+                        }`}>
                         {appointment.payment.payment_status}
                       </div>
                     </div>
@@ -354,7 +431,7 @@ export default function AppointmentDetailsModal({ appointmentId, onClose }: Appo
                         </div>
                       );
                     }
-                    
+
                     return (
                       <div className="space-y-4 bg-white/5 p-4 rounded">
                         {/* Clinic Details */}
@@ -368,7 +445,7 @@ export default function AppointmentDetailsModal({ appointmentId, onClose }: Appo
                             </div>
                           </div>
                         )}
-                        
+
                         {/* Diagnosis */}
                         {prescriptionData.diagnosis && (
                           <div>
@@ -378,7 +455,7 @@ export default function AppointmentDetailsModal({ appointmentId, onClose }: Appo
                             </div>
                           </div>
                         )}
-                        
+
                         {/* Medications */}
                         {prescriptionData.medications && prescriptionData.medications.length > 0 && (
                           <div>
@@ -413,7 +490,7 @@ export default function AppointmentDetailsModal({ appointmentId, onClose }: Appo
                             </div>
                           </div>
                         )}
-                        
+
                         {/* Recommended Tests */}
                         {prescriptionData.recommendedTests && prescriptionData.recommendedTests.length > 0 && (
                           <div>
@@ -427,7 +504,7 @@ export default function AppointmentDetailsModal({ appointmentId, onClose }: Appo
                             </div>
                           </div>
                         )}
-                        
+
                         {/* Advice */}
                         {prescriptionData.advice && (
                           <div>
@@ -437,7 +514,7 @@ export default function AppointmentDetailsModal({ appointmentId, onClose }: Appo
                             </div>
                           </div>
                         )}
-                        
+
                         {/* Follow-up */}
                         {prescriptionData.followUp && (
                           <div>
@@ -447,16 +524,16 @@ export default function AppointmentDetailsModal({ appointmentId, onClose }: Appo
                             </div>
                           </div>
                         )}
-                        
+
                         {/* Signature */}
                         {prescriptionData.signature && (
                           <div>
                             <h4 className="font-medium text-sm mb-2">Doctor Signature</h4>
                             <div className="text-sm bg-white/10 p-3 rounded text-right">
                               {prescriptionData.signature.startsWith('data:image') ? (
-                                <img 
-                                  src={prescriptionData.signature} 
-                                  alt="Doctor Signature" 
+                                <img
+                                  src={prescriptionData.signature}
+                                  alt="Doctor Signature"
                                   className="max-h-12 max-w-48 inline-block"
                                 />
                               ) : (
@@ -538,13 +615,13 @@ export default function AppointmentDetailsModal({ appointmentId, onClose }: Appo
               )}
 
               {/* Empty state for appointments with no additional data */}
-              {!appointment.notes && !appointment.aiNotes && !appointment.prescription && 
-               !appointment.prescriptionPdf && !appointment.recommendedTests && 
-               (!appointment.transcriptions || appointment.transcriptions.length === 0) && (
-                <div className="text-center py-8 text-sm opacity-70">
-                  No additional details available for this appointment.
-                </div>
-              )}
+              {!appointment.notes && !appointment.aiNotes && !appointment.prescription &&
+                !appointment.prescriptionPdf && !appointment.recommendedTests &&
+                (!appointment.transcriptions || appointment.transcriptions.length === 0) && (
+                  <div className="text-center py-8 text-sm opacity-70">
+                    No additional details available for this appointment.
+                  </div>
+                )}
             </>
           )}
         </div>

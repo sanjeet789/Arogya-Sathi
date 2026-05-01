@@ -148,7 +148,7 @@ export default function PaymentModal({
             </div>
             <div className="bg-white/5 p-3 rounded-lg">
               <p className="text-sm font-medium">Pay to:</p>
-              <p className="text-lg font-mono text-blue-400">saswatsusmoy@upi</p>
+              <p className="text-lg font-mono text-blue-400">9482907443@upi</p>
               <p className="text-xs opacity-70 mt-1">Use your UPI app to scan and pay</p>
             </div>
           </div>

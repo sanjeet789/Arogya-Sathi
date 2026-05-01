@@ -21,7 +21,7 @@ class Settings:
     # Cerebras AI settings
     cerebras_api_key: str = os.getenv("CEREBRAS_API_KEY", "")
     cerebras_base_url: str = os.getenv("CEREBRAS_BASE_URL", "https://api.cerebras.ai/v1")
-    cerebras_model: str = os.getenv("CEREBRAS_MODEL", "llama-3.1-8b-instruct")
+    cerebras_model: str = os.getenv("CEREBRAS_MODEL", "llama3.1-8b")
 
     # Database settings
     database_url: str = os.getenv("DATABASE_URL", "")

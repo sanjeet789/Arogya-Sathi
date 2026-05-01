@@ -437,7 +437,7 @@ export default function Prescription({
           </div>
 
           <div class="footer">
-            <div class="muted">Generated via AarogyaAI</div>
+            <div class="muted">Generated via Arogya Sathi</div>
             <div class="sign">
               ${signature && signature.startsWith('data:image') 
                 ? `<img src="${signature}" alt="Doctor Signature" style="max-height: 40px; max-width: 200px;" />`

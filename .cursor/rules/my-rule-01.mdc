@@ -50,51 +50,59 @@ Only create new files when:
 - Optimize performance within existing structure
 
 Remember: **Fix it in place, don't create files to work around problems.**
-# AarogyaAI Development Rules
 
-## Core Principles
+---
 
-### File Creation Policy
-- **STRICT**: Do NOT create unnecessary test files, temporary files, or extra files unless explicitly requested
-- **FIX IN PLACE**: When something isn't working, fix it directly in the existing codebase
-- **NO WORKAROUNDS**: Avoid creating separate files for debugging, logging, or temporary solutions
-- **HOOK OR BY CROOK**: Solve problems by modifying existing code, not by creating new files
+## AI/LLM Integration (AarogyaAI-Specific)
+- Validate and sanitize all inputs before sending to any AI/LLM endpoint
+- Handle API timeouts, rate limits, and fallback responses gracefully within existing service files
+- Never hardcode API keys — use environment variables or existing config modules
+- Log AI responses inline using the existing logging utility; never create separate log files
+- Keep prompts and system instructions versioned inside existing constants or config files
 
-### Development Approach
-1. **Direct Fixes**: Always attempt to fix issues within the existing file structure
-2. **Inline Solutions**: Implement solutions directly where the problem exists
-3. **Modify Existing**: Edit existing files rather than creating new ones
-4. **Consolidate**: Merge functionality into existing files when possible
+---
 
-### What NOT to Create
-- Test files unless specifically requested
-- Temporary debug files
-- Backup copies
-- Separate utility files for simple functions
-- Additional configuration files for basic settings
-- Log files or debug output files
-- Separate documentation files unless requested
+## Health Data Handling
+- Treat all patient/health data as sensitive — apply encryption and access control within existing models
+- Never log raw health data to console or files; mask or omit PII in debug output
+- Validate all health-related inputs strictly (ranges, types, required fields) inside existing validators
+- Follow HIPAA/DPDP principles: minimum necessary data, purpose limitation, and user consent flows
 
-### What TO Do Instead
-- Fix bugs directly in the source code
-- Add functionality to existing files
-- Modify existing functions to handle edge cases
-- Use inline comments for debugging
-- Implement error handling within existing code
-- Add logging directly to existing functions
+---
 
-### Exception Cases
-Only create new files when:
-1. Explicitly requested by the user
-2. Absolutely necessary for architectural reasons
-3. Required by the framework/library being used
-4. Part of the core project structure (e.g., main entry points)
+## State & Data Flow
+- Centralize state management; avoid prop-drilling or redundant local state across components
+- Keep API calls inside existing service/repository layers — never directly in UI components
+- Normalize API responses at the boundary (service layer) before passing to the rest of the app
+- Avoid storing derived data — compute it from source of truth within existing utilities
 
-### Code Quality
-- Maintain clean, readable code
-- Use meaningful variable and function names
-- Add comments for complex logic
-- Handle errors gracefully within existing code
-- Optimize performance within existing structure
+---
 
-Remember: **Fix it in place, don't create files to work around problems.**
+## Performance
+- Memoize expensive computations and repeated renders using existing patterns in the codebase
+- Debounce or throttle high-frequency user inputs (search, scroll) inline in existing handlers
+- Lazy-load heavy components or routes using the framework's built-in mechanism
+- Profile before optimizing — don't pre-optimize without evidence of a bottleneck
+
+---
+
+## Security
+- Sanitize all user inputs to prevent XSS, injection, and prompt injection attacks
+- Enforce authentication and authorization checks in existing middleware/guards — not in UI
+- Never expose internal stack traces or error details to the client; handle in existing error boundaries
+- Rotate secrets and tokens regularly; reference them only via environment variables
+
+---
+
+## Git & Version Control
+- Write clear, imperative commit messages: `Fix null check in patient record parser`
+- Keep commits atomic — one logical change per commit
+- Never commit secrets, `.env` files, or generated build artifacts
+- Prefer rebasing over merging for a clean, linear history on feature branches
+
+---
+
+## Communication & Handoff
+- Leave a `// TODO:` or `// FIXME:` inline comment with context when deferring work — never create a separate notes file
+- Document non-obvious decisions with a brief inline comment explaining *why*, not just *what*
+- When closing a task, verify the fix works end-to-end before marking it done

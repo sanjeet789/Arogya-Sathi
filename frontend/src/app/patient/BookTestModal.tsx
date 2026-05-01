@@ -17,13 +17,13 @@ type BookTestModalProps = {
   onBookingSuccess?: () => void;
 };
 
-export default function BookTestModal({ 
-  isOpen, 
-  onClose, 
-  patientUsername, 
-  preSelectedTestId, 
+export default function BookTestModal({
+  isOpen,
+  onClose,
+  patientUsername,
+  preSelectedTestId,
   appointmentId,
-  onBookingSuccess 
+  onBookingSuccess
 }: BookTestModalProps) {
   const [medicalTests, setMedicalTests] = useState<MedicalTest[]>([]);
   const [selectedTestId, setSelectedTestId] = useState(preSelectedTestId || "");
@@ -68,7 +68,7 @@ export default function BookTestModal({
     try {
       const res = await fetch("/api/test-bookings", {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "User-Agent": "AarogyaAI-Frontend/1.0.0",
         },
@@ -124,9 +124,9 @@ export default function BookTestModal({
         <form onSubmit={onSubmit} className="p-4 space-y-4">
           <div>
             <label className="block text-sm mb-1">Test</label>
-            <select 
+            <select
               className="w-full px-3 py-2 rounded border border-white/20 bg-transparent outline-none" 
-              value={selectedTestId} 
+              value={selectedTestId}
               onChange={(e) => setSelectedTestId(e.target.value)}
               required
               disabled={!!preSelectedTestId}
@@ -149,24 +149,24 @@ export default function BookTestModal({
 
           <div>
             <label className="block text-sm mb-1">Notes (optional)</label>
-            <textarea 
-              className="w-full px-3 py-2 rounded border border-white/20 bg-transparent outline-none resize-none" 
+            <textarea
+              className="w-full px-3 py-2 rounded border border-white/20 bg-transparent outline-none resize-none"
               rows={3}
-              value={notes} 
-              onChange={(e) => setNotes(e.target.value)} 
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
               placeholder="Any special instructions or notes"
             />
           </div>
 
           <div className="flex items-center gap-4 pt-2">
-            <button 
-              type="submit" 
-              disabled={submitting || !selectedTestId} 
+            <button
+              type="submit"
+              disabled={submitting || !selectedTestId}
               className="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-60 hover:bg-blue-700 transition-colors"
             >
               {submitting ? "Booking..." : "Book Test"}
             </button>
-            <button 
+            <button
               type="button"
               onClick={onClose}
               className="px-4 py-2 rounded border border-white/20 text-white hover:bg-white/5 transition-colors"

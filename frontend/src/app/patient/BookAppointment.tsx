@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import DateTimePicker from "./DateTimePicker";
 import PaymentModal from "./PaymentModal";
 
-type Doctor = { username: string };
+type Doctor = { username: string; consultationFee?: number | null };
 
 export default function BookAppointment({ patientUsername }: { patientUsername: string }) {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -22,9 +22,8 @@ export default function BookAppointment({ patientUsername }: { patientUsername: 
   const [patientId, setPatientId] = useState<string | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [paymentInProgress, setPaymentInProgress] = useState(false);
-  
-  // Payment amount (can be dynamic based on doctor/specialty)
-  const consultationFee = 500; // Default consultation fee
+  const [consultationFee, setConsultationFee] = useState<number>(500);
+  const [feeLoading, setFeeLoading] = useState(false);
 
   useEffect(() => {
     // Load all doctors from /api/users (simple map), filter role doctor
@@ -34,6 +33,7 @@ export default function BookAppointment({ patientUsername }: { patientUsername: 
       if (list[0]) {
         setDoctorUsername(list[0].username);
         setSelectedDoctor(list[0]);
+        fetchDoctorFee(list[0].username);
       }
     }).catch(() => setDoctors([]));
     
@@ -43,6 +43,33 @@ export default function BookAppointment({ patientUsername }: { patientUsername: 
       if (patient) setPatientId(patient.id);
     }).catch(() => {});
   }, [patientUsername]);
+
+  // Fetch doctor's consultation fee from their profile
+  const fetchDoctorFee = async (username: string) => {
+    setFeeLoading(true);
+    try {
+      const res = await fetch(`/api/doctor/profile?username=${encodeURIComponent(username)}`);
+      if (res.ok) {
+        const profile = await res.json();
+        if (profile && profile.consultationFee != null) {
+          setConsultationFee(profile.consultationFee);
+        } else {
+          setConsultationFee(500); // Default if not set
+        }
+      }
+    } catch {
+      setConsultationFee(500); // Default on error
+    } finally {
+      setFeeLoading(false);
+    }
+  };
+
+  const handleDoctorChange = (username: string) => {
+    setDoctorUsername(username);
+    const doc = doctors.find(d => d.username === username);
+    setSelectedDoctor(doc || null);
+    fetchDoctorFee(username);
+  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,7 +127,7 @@ export default function BookAppointment({ patientUsername }: { patientUsername: 
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <label className="block text-sm mb-1">Doctor</label>
-          <select className="w-full px-3 py-2 rounded border border-white/20 bg-transparent outline-none" value={doctorUsername} onChange={(e) => setDoctorUsername(e.target.value)}>
+          <select className="w-full px-3 py-2 rounded border border-white/20 bg-transparent outline-none" value={doctorUsername} onChange={(e) => handleDoctorChange(e.target.value)}>
             {doctors.map(d => <option key={d.username} value={d.username}>{d.username}</option>)}
           </select>
         </div>
@@ -115,6 +142,22 @@ export default function BookAppointment({ patientUsername }: { patientUsername: 
           <input className="w-full px-3 py-2 rounded border border-white/20 bg-transparent outline-none" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Describe your concern" />
         </div>
       </div>
+
+      {/* Consultation Fee Display */}
+      <div className="border border-white/10 rounded p-3 flex items-center justify-between">
+        <div>
+          <div className="text-sm font-medium">Consultation Fee</div>
+          <div className="text-xs opacity-60">Charged by Dr. {doctorUsername}</div>
+        </div>
+        <div className="text-right">
+          {feeLoading ? (
+            <span className="text-sm opacity-60">Loading...</span>
+          ) : (
+            <span className="text-lg font-semibold text-green-400">₹{consultationFee}</span>
+          )}
+        </div>
+      </div>
+
       <div className="flex items-center gap-4">
         <button 
           type="submit" 
@@ -145,5 +188,3 @@ export default function BookAppointment({ patientUsername }: { patientUsername: 
     </form>
   );
 }
-
-

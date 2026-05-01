@@ -2,8 +2,14 @@ import asyncio
 import uuid
 from typing import Dict, Optional
 
-from livekit.agents import AgentSession
-from livekit.plugins import cartesia
+try:
+    from livekit.agents import AgentSession
+    from livekit.plugins import cartesia
+    LIVEKIT_AVAILABLE = True
+except ImportError:
+    AgentSession = None  # type: ignore
+    cartesia = None  # type: ignore
+    LIVEKIT_AVAILABLE = False
 
 try:
     from livekit.plugins import silero  # type: ignore
@@ -19,7 +25,7 @@ class STTSessionWrapper:
         self._task: Optional[asyncio.Task] = None
 
     async def start(self) -> None:
-        if self.session is not None:
+        if not LIVEKIT_AVAILABLE or self.session is not None:
             return
         vad_component = silero.VAD.load() if silero else None
         self.session = AgentSession(

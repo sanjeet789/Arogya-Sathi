@@ -70,6 +70,7 @@ model DoctorProfile {
   clinicName   String?  // Clinic name
   clinicAddress String? // Clinic address
   clinicPhone  String?  // Clinic phone
+  consultationFee Float? // Consultation fee in INR
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

@@ -39,12 +39,16 @@ type DoctorAppointmentDetailsProps = {
   appointmentId: string;
   isOpen: boolean;
   onClose: () => void;
+  onDeleted?: () => void;
 };
 
-export default function DoctorAppointmentDetails({ appointmentId, isOpen, onClose }: DoctorAppointmentDetailsProps) {
+export default function DoctorAppointmentDetails({ appointmentId, isOpen, onClose, onDeleted }: DoctorAppointmentDetailsProps) {
   const [appointment, setAppointment] = useState<AppointmentDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && appointmentId) {
@@ -124,6 +128,28 @@ export default function DoctorAppointmentDetails({ appointmentId, isOpen, onClos
     }
   };
 
+  const handleDeleteAppointment = async () => {
+    if (!appointmentId) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/appointments?id=${encodeURIComponent(appointmentId)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        if (onDeleted) onDeleted();
+        onClose();
+      } else {
+        const data = await res.json();
+        setDeleteError(data.error || "Failed to delete appointment");
+      }
+    } catch {
+      setDeleteError("Failed to delete appointment");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -132,15 +158,67 @@ export default function DoctorAppointmentDetails({ appointmentId, isOpen, onClos
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/10">
           <h2 className="text-lg font-semibold">Appointment Details</h2>
-          <button
-            onClick={onClose}
-            className="text-white/60 hover:text-white transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Delete button */}
+            {appointment && (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="p-1.5 rounded text-white/50 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                title="Delete appointment"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="text-white/60 hover:text-white transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
+
+        {/* Delete confirmation banner */}
+        {showDeleteConfirm && (
+          <div className="px-4 py-3 bg-red-500/10 border-b border-red-500/20 flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium text-red-400">Delete this appointment?</div>
+              <div className="text-xs text-red-400/70 mt-0.5">This action cannot be undone. All related data will be removed.</div>
+            </div>
+            <div className="flex gap-2 ml-4">
+              <button
+                onClick={() => { setShowDeleteConfirm(false); setDeleteError(null); }}
+                className="px-3 py-1.5 text-xs border border-white/20 rounded hover:bg-white/5 transition-colors"
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAppointment}
+                disabled={deleting}
+                className="px-3 py-1.5 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {deleting && (
+                  <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                )}
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        )}
+        {deleteError && (
+          <div className="px-4 py-2 bg-red-500/10 border-b border-red-500/20 text-sm text-red-400 flex items-center justify-between">
+            <span>{deleteError}</span>
+            <button onClick={() => setDeleteError(null)} className="text-red-300 hover:text-white text-xs">✕</button>
+          </div>
+        )}
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-6">

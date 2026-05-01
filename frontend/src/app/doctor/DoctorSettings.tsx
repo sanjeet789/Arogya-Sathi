@@ -13,6 +13,7 @@ type Profile = {
   clinicName?: string | null;
   clinicAddress?: string | null;
   clinicPhone?: string | null;
+  consultationFee?: number | null;
 };
 
 export default function DoctorSettings({ username }: { username: string }) {
@@ -212,6 +213,27 @@ export default function DoctorSettings({ username }: { username: string }) {
               placeholder="+91-00000-00000"
             />
           </div>
+        </div>
+      </div>
+
+      <div className="border border-white/10 rounded p-4">
+        <h3 className="font-medium mb-4">Consultation Charges</h3>
+        
+        <div className="max-w-xs">
+          <label className="block text-sm mb-1">Appointment Fee (₹)</label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm opacity-60">₹</span>
+            <input
+              type="number"
+              min="0"
+              step="50"
+              className="w-full pl-7 pr-3 py-2 rounded border border-white/20 bg-transparent outline-none"
+              value={profile.consultationFee ?? ""}
+              onChange={(e) => update("consultationFee", e.target.value ? Number(e.target.value) : null)}
+              placeholder="500"
+            />
+          </div>
+          <p className="text-xs opacity-50 mt-1">This fee will be shown to patients when they book an appointment with you.</p>
         </div>
       </div>
 

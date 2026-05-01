@@ -24,3 +24,18 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Fix native <select> dropdown options visibility in dark mode */
+select option {
+  background-color: #1a1a1a;
+  color: #ededed;
+}
+
+select option:checked {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+select option:hover {
+  background-color: #333333;
+}

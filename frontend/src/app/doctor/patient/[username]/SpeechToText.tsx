@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useEffect, useRef } from "react";
 
-export default function SpeechToText({ onStart, onFinal, onPartial, onStop, onMeetTranscription }:{ onStart?: () => void; onFinal: (text: string) => void; onPartial?: (text: string) => void; onStop?: () => void; onMeetTranscription?: (text: string) => void }) {
+export default function SpeechToText({ onStart, onFinal, onPartial, onStop, onMeetTranscription }: { onStart?: () => void; onFinal: (text: string) => void; onPartial?: (text: string) => void; onStop?: () => void; onMeetTranscription?: (text: string) => void }) {
   const [listening, setListening] = useState(false);
   const [recognizer, setRecognizer] = useState<SpeechRecognition | null>(null as any);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +27,7 @@ export default function SpeechToText({ onStart, onFinal, onPartial, onStop, onMe
   // Fetch Meet transcription data periodically when active
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
-    
+
     if (meetTranscriptionActive && meetSessionId) {
       const fetchTranscriptions = async () => {
         try {
@@ -36,16 +36,16 @@ export default function SpeechToText({ onStart, onFinal, onPartial, onStop, onMe
           if (response.ok) {
             const data = await response.json();
             console.log(`[Meet Transcription] Received ${data.transcriptions?.length || 0} transcriptions, last count: ${lastTranscriptionCountRef.current}`);
-            
+
             if (data.transcriptions && data.transcriptions.length > 0) {
               setMeetTranscriptions(data.transcriptions);
-              
+
               // Send only new transcriptions to parent component
               if (data.transcriptions.length > lastTranscriptionCountRef.current) {
                 const newTranscriptions = data.transcriptions.slice(lastTranscriptionCountRef.current);
                 console.log(`[Meet Transcription] Sending ${newTranscriptions.length} new transcriptions to parent`);
                 console.log(`[Meet Transcription] New transcriptions:`, newTranscriptions);
-                
+
                 newTranscriptions.forEach((transcription: any) => {
                   if (onMeetTranscription) {
                     console.log(`[Meet Transcription] Calling onMeetTranscription with:`, transcription.text);
@@ -54,7 +54,7 @@ export default function SpeechToText({ onStart, onFinal, onPartial, onStop, onMe
                     console.warn(`[Meet Transcription] onMeetTranscription callback not available!`);
                   }
                 });
-                
+
                 lastTranscriptionCountRef.current = data.transcriptions.length;
               } else {
                 console.log(`[Meet Transcription] No new transcriptions (current: ${data.transcriptions.length}, last: ${lastTranscriptionCountRef.current})`);
@@ -67,17 +67,17 @@ export default function SpeechToText({ onStart, onFinal, onPartial, onStop, onMe
           console.error("[Meet Transcription] Failed to fetch:", err);
         }
       };
-      
+
       // Fetch immediately
       fetchTranscriptions();
-      
+
       // Then fetch every 2 seconds
       interval = setInterval(fetchTranscriptions, 2000);
     } else {
       // Reset counter when stopping
       lastTranscriptionCountRef.current = 0;
     }
-    
+
     return () => {
       if (interval) {
         clearInterval(interval);
@@ -88,34 +88,34 @@ export default function SpeechToText({ onStart, onFinal, onPartial, onStop, onMe
   const startAudioCapture = async (sessionId: string) => {
     try {
       console.log("[Audio Capture] Starting browser speech recognition with session:", sessionId);
-      
+
       const w: any = window as any;
       const SR: any = w.SpeechRecognition || w.webkitSpeechRecognition;
-      
+
       if (!SR) {
         setError("Speech recognition not supported. Please use Chrome or Edge.");
         return;
       }
-      
+
       // Create speech recognizer for Meet audio
       const rec: SpeechRecognition = new SR();
       rec.continuous = true;
       rec.interimResults = true;
       rec.lang = "en-US";
-      
+
       rec.onresult = async (e: any) => {
         let finalText = "";
-        
+
         for (let i = e.resultIndex; i < e.results.length; i++) {
           const transcript = e.results[i][0].transcript;
           if (e.results[i].isFinal) {
             finalText += transcript + " ";
           }
         }
-        
+
         if (finalText.trim()) {
           console.log("[Audio Capture] Final transcription:", finalText);
-          
+
           // Send transcription directly to backend
           try {
             const response = await fetch(`${BACKEND_BASE}/meet/transcription/${sessionId}`, {
@@ -126,7 +126,7 @@ export default function SpeechToText({ onStart, onFinal, onPartial, onStop, onMe
               },
               body: JSON.stringify({ text: finalText.trim() })
             });
-            
+
             if (response.ok) {
               console.log("[Audio Capture] Transcription sent to backend");
             } else {
@@ -137,12 +137,12 @@ export default function SpeechToText({ onStart, onFinal, onPartial, onStop, onMe
           }
         }
       };
-      
+
       rec.onerror = (err: any) => {
         console.error("[Audio Capture] Speech recognition error:", err);
         setError("Speech recognition error. Please try again.");
       };
-      
+
       rec.onend = () => {
         console.log("[Audio Capture] Speech recognition ended");
         // Check if we should restart (only if still capturing)
@@ -156,24 +156,24 @@ export default function SpeechToText({ onStart, onFinal, onPartial, onStop, onMe
           }
         }
       };
-      
+
       rec.start();
       meetRecognizerRef.current = rec;
       setAudioCapturing(true);
       console.log("[Audio Capture] Speech recognition started");
-      
+
     } catch (err) {
       console.error("[Audio Capture] Failed to start:", err);
       setError("Failed to start speech recognition. Please try again.");
     }
   };
-  
+
   const stopAudioCapture = () => {
     console.log("[Audio Capture] Stopping...");
-    
+
     // Set capturing to false first to prevent restart
     setAudioCapturing(false);
-    
+
     if (meetRecognizerRef.current) {
       try {
         meetRecognizerRef.current.stop();
@@ -182,16 +182,16 @@ export default function SpeechToText({ onStart, onFinal, onPartial, onStop, onMe
       }
       meetRecognizerRef.current = null;
     }
-    
+
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     }
-    
+
     if (audioStreamRef.current) {
       audioStreamRef.current.getTracks().forEach(track => track.stop());
       audioStreamRef.current = null;
     }
-    
+
     console.log("[Audio Capture] Stopped");
   };
 
@@ -202,22 +202,22 @@ export default function SpeechToText({ onStart, onFinal, onPartial, onStop, onMe
         console.log("[Meet Transcription] Starting transcription...");
         const response = await fetch(`${BACKEND_BASE}/meet/transcription/start`, {
           method: "POST",
-          headers: { 
+          headers: {
             "Content-Type": "application/json",
             "User-Agent": "AarogyaAI-Frontend/1.0.0"
           },
-          body: JSON.stringify({ 
-            meet_url: "https://meet.google.com/gjv-yrwa-oop",
+          body: JSON.stringify({
+            meet_url: "https://meet.google.com/xqr-xwhj-uwr",
             appointment_id: "current-appointment"
           }),
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           console.log("[Meet Transcription] Started with session ID:", data.session_id);
           setMeetSessionId(data.session_id);
           setMeetTranscriptionActive(true);
-          
+
           // Start audio capture with the session ID
           await startAudioCapture(data.session_id);
         } else {
@@ -233,17 +233,17 @@ export default function SpeechToText({ onStart, onFinal, onPartial, onStop, onMe
       try {
         // Stop audio capture first
         stopAudioCapture();
-        
+
         if (meetSessionId) {
           const response = await fetch(`${BACKEND_BASE}/meet/transcription/stop`, {
             method: "POST",
-            headers: { 
+            headers: {
               "Content-Type": "application/json",
               "User-Agent": "AarogyaAI-Frontend/1.0.0"
             },
             body: JSON.stringify({ session_id: meetSessionId }),
           });
-          
+
           if (response.ok) {
             setMeetTranscriptionActive(false);
             setMeetSessionId(null);
@@ -266,7 +266,7 @@ export default function SpeechToText({ onStart, onFinal, onPartial, onStop, onMe
     }
     if (!listening) {
       try {
-        const res = await fetch(`${BACKEND_BASE}/stt/session/start`, { 
+        const res = await fetch(`${BACKEND_BASE}/stt/session/start`, {
           method: "POST",
           headers: { "User-Agent": "AarogyaAI-Frontend/1.0.0" }
         });
@@ -307,12 +307,12 @@ export default function SpeechToText({ onStart, onFinal, onPartial, onStop, onMe
       if (sessionId) {
         fetch(`${BACKEND_BASE}/stt/session/stop`, {
           method: "POST",
-          headers: { 
+          headers: {
             "Content-Type": "application/json",
             "User-Agent": "AarogyaAI-Frontend/1.0.0"
           },
           body: JSON.stringify({ session_id: sessionId }),
-        }).catch(() => {});
+        }).catch(() => { });
         setSessionId(null);
       }
       if (onPartial) onPartial("");
@@ -346,29 +346,28 @@ export default function SpeechToText({ onStart, onFinal, onPartial, onStop, onMe
       )}
       {error && <div className="text-sm text-red-500">{error}</div>}
       <div className="text-xs opacity-70">Speaks will be transcribed and shown below in real-time.</div>
-      
+
       {showVideoSection && (
         <div className="border-t border-white/10 pt-3 mt-3">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-medium">Video Meeting</h3>
             <button
-              className={`px-3 py-1 rounded border border-white/20 text-sm ${
-                meetTranscriptionActive ? "bg-red-500/20 text-red-400" : "bg-green-500/20 text-green-400"
-              }`}
+              className={`px-3 py-1 rounded border border-white/20 text-sm ${meetTranscriptionActive ? "bg-red-500/20 text-red-400" : "bg-green-500/20 text-green-400"
+                }`}
               onClick={toggleMeetTranscription}
             >
               {meetTranscriptionActive ? "Stop Transcription" : "Start Transcription"}
             </button>
           </div>
-          
+
           {/* Google Meet Join Section */}
           <div className="bg-white/5 p-4 rounded border border-white/10 mb-3">
             <div className="text-sm mb-3">Video Consultation:</div>
-            
+
             {/* Join Button */}
             <div className="flex items-center justify-center mb-3">
               <a
-                href="https://meet.google.com/gjv-yrwa-oop"
+                href="https://meet.google.com/xqr-xwhj-uwr"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
@@ -379,12 +378,12 @@ export default function SpeechToText({ onStart, onFinal, onPartial, onStop, onMe
                 Join Video Call
               </a>
             </div>
-            
+
             {/* Meeting Info */}
             <div className="bg-white/10 p-3 rounded border border-white/20">
               <div className="text-xs opacity-70 mb-1">Meeting Link:</div>
               <div className="text-sm font-mono break-all text-blue-400">
-                https://meet.google.com/gjv-yrwa-oop
+                https://meet.google.com/xqr-xwhj-uwr
               </div>
               <div className="text-xs opacity-70 mt-2">
                 Click "Join Video Call" to open Google Meet in a new tab
@@ -402,7 +401,7 @@ export default function SpeechToText({ onStart, onFinal, onPartial, onStop, onMe
               <div className="text-xs opacity-70 mt-1">
                 Session ID: {meetSessionId}
               </div>
-              
+
               {/* Show Meet transcriptions or waiting message */}
               <div className="mt-3 pt-3 border-t border-green-500/20">
                 {meetTranscriptions.length > 0 ? (

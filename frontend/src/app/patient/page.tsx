@@ -95,6 +95,7 @@ export default function PatientDashboard() {
   const isReady = !loading && !!user && user.role === "patient";
 
   const renderContent = () => {
+    if (!user) return null;
     switch (active) {
       case "home":
         return (
@@ -321,6 +322,7 @@ export default function PatientDashboard() {
       <AppointmentDetailsModal
         appointmentId={selectedAppointmentId}
         onClose={() => setSelectedAppointmentId(null)}
+        onDeleted={fetchAppointments}
       />
     </div>
   );
