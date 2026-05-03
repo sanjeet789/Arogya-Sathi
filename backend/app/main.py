@@ -31,7 +31,7 @@ app = FastAPI(title="AarogyaAI STT Service", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Consider restricting in production
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
