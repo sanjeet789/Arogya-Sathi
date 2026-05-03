@@ -41,7 +41,7 @@ export default function DoctorDashboard() {
               <h2 className="font-medium mb-2">Appointments</h2>
               <p className="text-sm opacity-80">Manage your appointments.</p>
             </div>
-            <DoctorAppointments username={user.username} />
+            <DoctorAppointments username={user?.username || ""} />
           </div>
         );
       case "patients":
@@ -51,7 +51,7 @@ export default function DoctorDashboard() {
               <h2 className="font-medium mb-2">Patients</h2>
               <p className="text-sm opacity-80">Patients who have booked with you.</p>
             </div>
-            <DoctorPatients username={user.username} />
+            <DoctorPatients username={user?.username || ""} />
           </div>
         );
       case "payments":
@@ -61,11 +61,11 @@ export default function DoctorDashboard() {
               <h2 className="font-medium mb-2">Payments</h2>
               <p className="text-sm opacity-80">View payment history and statistics.</p>
             </div>
-            <DoctorPayments username={user.username} />
+            <DoctorPayments username={user?.username || ""} />
           </div>
         );
       case "settings":
-        return <DoctorSettings username={user.username} />;
+        return <DoctorSettings username={user?.username || ""} />;
       default:
         return null;
     }

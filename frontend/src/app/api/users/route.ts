@@ -3,9 +3,22 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/hash";
 
 export async function GET() {
-  const users = await prisma.user.findMany();
-  const result = users.reduce<Record<string, { id: string; username: string; passwordHash: string; role: string }>>((acc, u) => {
-    acc[u.username] = { id: u.id, username: u.username, passwordHash: u.passwordHash, role: u.role };
+  const users = await prisma.user.findMany({
+    include: {
+      doctorProfile: {
+        select: { department: true, speciality: true }
+      }
+    }
+  });
+  const result = users.reduce<Record<string, { id: string; username: string; passwordHash: string; role: string; department?: string; speciality?: string }>>((acc, u) => {
+    acc[u.username] = { 
+      id: u.id, 
+      username: u.username, 
+      passwordHash: u.passwordHash, 
+      role: u.role,
+      department: u.doctorProfile?.department || undefined,
+      speciality: u.doctorProfile?.speciality || undefined
+    };
     return acc;
   }, {});
   return NextResponse.json(result);
