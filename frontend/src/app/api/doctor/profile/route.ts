@@ -1,3 +1,4 @@
+// Prisma schema updated with availableDays
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -23,6 +24,10 @@ export async function PUT(req: NextRequest) {
     clinicAddress?: string | null;
     clinicPhone?: string | null;
     consultationFee?: number | null;
+    availableDays?: string | null;
+    startTime?: string | null;
+    endTime?: string | null;
+    slotDuration?: number | null;
   };
   const username = (body.username || "").trim().toLowerCase();
   if (!username) return NextResponse.json({ error: "username required" }, { status: 400 });
@@ -43,6 +48,10 @@ export async function PUT(req: NextRequest) {
         clinicAddress: body.clinicAddress ?? undefined,
         clinicPhone: body.clinicPhone ?? undefined,
         consultationFee: body.consultationFee ?? undefined,
+        availableDays: body.availableDays ?? undefined,
+        startTime: body.startTime ?? undefined,
+        endTime: body.endTime ?? undefined,
+        slotDuration: body.slotDuration ?? undefined,
       },
       create: {
         userId: user.id,
@@ -57,6 +66,10 @@ export async function PUT(req: NextRequest) {
         clinicAddress: body.clinicAddress ?? null,
         clinicPhone: body.clinicPhone ?? null,
         consultationFee: body.consultationFee ?? null,
+        availableDays: body.availableDays ?? null,
+        startTime: body.startTime ?? null,
+        endTime: body.endTime ?? null,
+        slotDuration: body.slotDuration ?? null,
       },
     });
     return NextResponse.json(upserted);

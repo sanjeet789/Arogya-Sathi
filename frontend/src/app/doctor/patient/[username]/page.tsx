@@ -42,8 +42,6 @@ export default function DoctorPatientProfile() {
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [completing, setCompleting] = useState(false);
-  const [listening, setListening] = useState(false);
-  const [recognizer, setRecognizer] = useState<SpeechRecognition | null>(null as any);
   // Editable (except name): keep local state mirrors
   const [age, setAge] = useState<number | null>(null);
   const [gender, setGender] = useState<string>("");
@@ -371,7 +369,10 @@ export default function DoctorPatientProfile() {
           });
         }}
       />
-      <Transcripts items={transcripts} partial={partial} />
+      <Transcripts items={transcripts} partial={partial} onManualAdd={async (text) => {
+          await persistSessionTranscript(text);
+          setTranscripts((prev) => [...prev, { text }]);
+        }} />
       <AINotes 
         transcripts={transcripts} 
         appointmentId={appointmentId} 

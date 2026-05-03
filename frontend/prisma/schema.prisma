@@ -29,6 +29,9 @@ model User {
   // Payments
   patientPayments Payment[] @relation("PatientPayments")
   doctorPayments  Payment[] @relation("DoctorPayments")
+
+  // Test Bookings
+  testBookings    TestBooking[]
 }
 
 enum Role {
@@ -72,6 +75,12 @@ model DoctorProfile {
   clinicPhone  String?  // Clinic phone
   consultationFee Float? // Consultation fee in INR
 
+  // Availability settings
+  availableDays String? // e.g., "1,2,3,4,5" for Mon-Fri
+  startTime     String? // e.g., "09:00"
+  endTime       String? // e.g., "17:00"
+  slotDuration  Int?    // e.g., 30 (minutes)
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -109,6 +118,20 @@ model AppointmentTranscription {
 model MedicalTests {
   TestID   String @id @default(cuid())
   TestName String @unique
+}
+
+model TestBooking {
+  id            String    @id @default(cuid())
+  testId        String
+  testName      String
+  appointmentId String?
+  patientId     String
+  patient       User      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  status        String    @default("PENDING") // PENDING, CONFIRMED, COMPLETED, CANCELLED
+  scheduledAt   DateTime?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 model ChatHistory {
@@ -197,4 +220,5 @@ enum PaymentMethod {
   CARD
   NET_BANKING
   WALLET
+  RAZORPAY
 }

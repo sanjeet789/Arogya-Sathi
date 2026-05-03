@@ -10,6 +10,10 @@ type DateTimePickerProps = {
   maxDate?: string;
   disabled?: boolean;
   className?: string;
+  availableDays?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  slotDuration?: number | null;
 };
 
 export default function DateTimePicker({
@@ -19,7 +23,11 @@ export default function DateTimePicker({
   minDate,
   maxDate,
   disabled = false,
-  className = ""
+  className = "",
+  availableDays,
+  startTime,
+  endTime,
+  slotDuration
 }: DateTimePickerProps) {
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
@@ -157,11 +165,23 @@ export default function DateTimePicker({
       const isPast = dateStr < todayStr;
       const isSelected = dateStr === selectedDate;
       
+      let isAvailable = true;
+      if (availableDays) {
+        const allowedDays = availableDays.toLowerCase().split(',').map(d => d.trim());
+        const dayOfWeek = new Date(year, month, day).toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+        // If they didn't write valid days, let's default to true or we could strict match.
+        // We'll strict match. If allowedDays is empty, we just allow all.
+        if (allowedDays.length > 0 && allowedDays[0] !== "") {
+          isAvailable = allowedDays.includes(dayOfWeek);
+        }
+      }
+      
       days.push({
         day,
         dateStr,
         isPast,
-        isSelected
+        isSelected,
+        isAvailable
       });
     }
 
@@ -265,12 +285,12 @@ export default function DateTimePicker({
                 <button
                   key={index}
                   type="button"
-                  onClick={() => day && !day.isPast && handleDateChange(day.dateStr)}
-                  disabled={!day || day.isPast}
+                  onClick={() => day && !day.isPast && day.isAvailable && handleDateChange(day.dateStr)}
+                  disabled={!day || day.isPast || !day.isAvailable}
                   className={`
                     w-8 h-8 text-xs rounded flex items-center justify-center
                     ${!day ? '' : 
-                      day.isPast ? 'text-white/30 cursor-not-allowed' :
+                      day.isPast || !day.isAvailable ? 'text-white/30 cursor-not-allowed' :
                       day.isSelected ? 'bg-blue-600 text-white' :
                       'text-white hover:bg-white/10'
                     }
@@ -290,26 +310,48 @@ export default function DateTimePicker({
         <select
           value={selectedTime}
           onChange={(e) => handleTimeChange(e.target.value)}
-          disabled={disabled}
+          disabled={disabled || !selectedDate}
           className="w-full px-3 py-2 rounded border border-white/20 bg-transparent outline-none text-sm disabled:opacity-50"
         >
           <option value="">Select time</option>
-          {Array.from({ length: 24 }, (_, i) => {
-            const hour = i;
-            const timeSlots = hour < 12 ? 
-              [`${hour.toString().padStart(2, '0')}:00`, `${hour.toString().padStart(2, '0')}:30`] :
-              [`${hour.toString().padStart(2, '0')}:00`, `${hour.toString().padStart(2, '0')}:30`];
-            
-            return timeSlots.map(time => (
-              <option key={time} value={time}>
-                {new Date(`2000-01-01T${time}`).toLocaleTimeString([], { 
-                  hour: '2-digit', 
-                  minute: '2-digit',
-                  hour12: true 
-                })}
-              </option>
-            ));
-          }).flat()}
+          {(() => {
+            if (startTime && endTime && slotDuration) {
+              const slots = [];
+              let current = new Date(`2000-01-01T${startTime}`);
+              const end = new Date(`2000-01-01T${endTime}`);
+              
+              while (current <= end) {
+                const hours = String(current.getHours()).padStart(2, '0');
+                const minutes = String(current.getMinutes()).padStart(2, '0');
+                slots.push(`${hours}:${minutes}`);
+                current.setMinutes(current.getMinutes() + slotDuration);
+              }
+              return slots.map(time => (
+                <option key={time} value={time}>
+                  {new Date(`2000-01-01T${time}`).toLocaleTimeString([], { 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    hour12: true 
+                  })}
+                </option>
+              ));
+            } else {
+              // Default fallback
+              return Array.from({ length: 24 }, (_, i) => {
+                const hour = i;
+                const timeSlots = [`${hour.toString().padStart(2, '0')}:00`, `${hour.toString().padStart(2, '0')}:30`];
+                return timeSlots.map(time => (
+                  <option key={time} value={time}>
+                    {new Date(`2000-01-01T${time}`).toLocaleTimeString([], { 
+                      hour: '2-digit', 
+                      minute: '2-digit',
+                      hour12: true 
+                    })}
+                  </option>
+                ));
+              }).flat();
+            }
+          })()}
         </select>
       </div>
 

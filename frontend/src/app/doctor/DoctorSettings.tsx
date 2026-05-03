@@ -14,6 +14,10 @@ type Profile = {
   clinicAddress?: string | null;
   clinicPhone?: string | null;
   consultationFee?: number | null;
+  availableDays?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  slotDuration?: number | null;
 };
 
 export default function DoctorSettings({ username }: { username: string }) {
@@ -212,6 +216,54 @@ export default function DoctorSettings({ username }: { username: string }) {
               onChange={(e) => update("clinicPhone", e.target.value)}
               placeholder="+91-00000-00000"
             />
+          </div>
+        </div>
+      </div>
+
+      <div className="border border-white/10 rounded p-4">
+        <h3 className="font-medium mb-4">Availability Settings</h3>
+        
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <label className="block text-sm mb-1">Available Days (comma separated, e.g. Monday, Tuesday, Friday)</label>
+            <input
+              className="w-full px-3 py-2 rounded border border-white/20 bg-transparent outline-none"
+              value={profile.availableDays ?? ""}
+              onChange={(e) => update("availableDays", e.target.value)}
+              placeholder="Monday, Tuesday, Wednesday, Thursday, Friday"
+            />
+            <p className="text-xs opacity-50 mt-1">Specify the days of the week you are available for appointments.</p>
+          </div>
+          <div>
+            <label className="block text-sm mb-1">Start Time</label>
+            <input
+              type="time"
+              className="w-full px-3 py-2 rounded border border-white/20 bg-transparent outline-none [color-scheme:dark]"
+              value={profile.startTime ?? ""}
+              onChange={(e) => update("startTime", e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm mb-1">End Time</label>
+            <input
+              type="time"
+              className="w-full px-3 py-2 rounded border border-white/20 bg-transparent outline-none [color-scheme:dark]"
+              value={profile.endTime ?? ""}
+              onChange={(e) => update("endTime", e.target.value)}
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm mb-1">Slot Duration (Minutes)</label>
+            <select
+              className="w-full px-3 py-2 rounded border border-white/20 bg-transparent outline-none"
+              value={profile.slotDuration ?? 30}
+              onChange={(e) => update("slotDuration", Number(e.target.value))}
+            >
+              <option value={15}>15 Minutes</option>
+              <option value={30}>30 Minutes</option>
+              <option value={45}>45 Minutes</option>
+              <option value={60}>60 Minutes</option>
+            </select>
           </div>
         </div>
       </div>

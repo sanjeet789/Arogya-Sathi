@@ -25,6 +25,12 @@ export default function BookAppointment({ patientUsername }: { patientUsername: 
   const [consultationFee, setConsultationFee] = useState<number>(500);
   const [feeLoading, setFeeLoading] = useState(false);
 
+  // Availability states
+  const [availableDays, setAvailableDays] = useState<string | null>(null);
+  const [startTime, setStartTime] = useState<string | null>(null);
+  const [endTime, setEndTime] = useState<string | null>(null);
+  const [slotDuration, setSlotDuration] = useState<number | null>(null);
+
   useEffect(() => {
     // Load all doctors from /api/users (simple map), filter role doctor
     fetch("/api/users").then(r => r.json()).then((map: Record<string, { role: string }>) => {
@@ -44,21 +50,37 @@ export default function BookAppointment({ patientUsername }: { patientUsername: 
     }).catch(() => {});
   }, [patientUsername]);
 
-  // Fetch doctor's consultation fee from their profile
+  // Fetch doctor's consultation fee and availability from their profile
   const fetchDoctorFee = async (username: string) => {
     setFeeLoading(true);
     try {
       const res = await fetch(`/api/doctor/profile?username=${encodeURIComponent(username)}`);
       if (res.ok) {
         const profile = await res.json();
-        if (profile && profile.consultationFee != null) {
-          setConsultationFee(profile.consultationFee);
+        if (profile) {
+          if (profile.consultationFee != null) {
+            setConsultationFee(profile.consultationFee);
+          } else {
+            setConsultationFee(500); // Default if not set
+          }
+          setAvailableDays(profile.availableDays ?? null);
+          setStartTime(profile.startTime ?? null);
+          setEndTime(profile.endTime ?? null);
+          setSlotDuration(profile.slotDuration ?? null);
         } else {
           setConsultationFee(500); // Default if not set
+          setAvailableDays(null);
+          setStartTime(null);
+          setEndTime(null);
+          setSlotDuration(null);
         }
       }
     } catch {
       setConsultationFee(500); // Default on error
+      setAvailableDays(null);
+      setStartTime(null);
+      setEndTime(null);
+      setSlotDuration(null);
     } finally {
       setFeeLoading(false);
     }
@@ -136,6 +158,10 @@ export default function BookAppointment({ patientUsername }: { patientUsername: 
           value={datetime}
           onChange={setDatetime}
           minDate={new Date().toISOString().slice(0, 16)}
+          availableDays={availableDays}
+          startTime={startTime}
+          endTime={endTime}
+          slotDuration={slotDuration}
         />
         <div className="md:col-span-2">
           <label className="block text-sm mb-1">Reason (optional)</label>

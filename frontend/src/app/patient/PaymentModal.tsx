@@ -25,6 +25,7 @@ export default function PaymentModal({
   doctorName,
   appointmentDate,
 }: PaymentModalProps) {
+  const [paymentMethod, setPaymentMethod] = useState<"UPI" | "RAZORPAY">("UPI");
   const [upiTransactionId, setUpiTransactionId] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +36,7 @@ export default function PaymentModal({
       setUpiTransactionId("");
       setError(null);
       setIsProcessing(false);
+      setPaymentMethod("UPI");
     }
   }, [isOpen]);
 
@@ -82,6 +84,109 @@ export default function PaymentModal({
     }
   };
 
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handleRazorpayPayment = async () => {
+    setIsProcessing(true);
+    setError(null);
+
+    const res = await loadRazorpayScript();
+    if (!res) {
+      setError("Razorpay SDK failed to load. Are you online?");
+      setIsProcessing(false);
+      return;
+    }
+
+    try {
+      // First, create the order on the backend
+      const orderRes = await fetch("/api/payments/razorpay-order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ amount }),
+      });
+
+      if (!orderRes.ok) {
+        throw new Error("Failed to create order");
+      }
+
+      const order = await orderRes.json();
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "",
+        amount: amount * 100, // Amount in paise
+        currency: "INR",
+        name: "Aarogya Sathi",
+        description: `Consultation with Dr. ${doctorName}`,
+        order_id: order.id, // Pass the order ID from backend
+        handler: async function (response: any) {
+        try {
+          setIsProcessing(true);
+          const saveRes = await fetch("/api/payments", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              appointmentId: appointmentId,
+              patientId: patientId,
+              doctorId: doctorId,
+              amount: amount,
+              method: "RAZORPAY",
+              transactionId: response.razorpay_payment_id,
+              status: "COMPLETED"
+            }),
+          });
+
+          if (saveRes.ok) {
+            onSuccess();
+            onClose();
+          } else {
+            setError("Failed to save payment details");
+          }
+        } catch (err) {
+          setError("Failed to save payment");
+        } finally {
+          setIsProcessing(false);
+        }
+      },
+      prefill: {
+        name: "Patient",
+        email: "patient@example.com",
+        contact: "9999999999",
+      },
+      theme: {
+        color: "#3B82F6",
+      },
+      modal: {
+        ondismiss: function() {
+          setIsProcessing(false);
+        }
+      }
+    };
+
+    const paymentObject = new (window as any).Razorpay(options);
+    paymentObject.on("payment.failed", function (response: any) {
+      setError(`Payment failed: ${response.error.description}`);
+      setIsProcessing(false);
+    });
+    paymentObject.open();
+
+    } catch (err) {
+      setError("Failed to initialize Razorpay payment. Please try again.");
+      setIsProcessing(false);
+    }
+  };
+
 
   if (!isOpen) return null;
 
@@ -122,53 +227,83 @@ export default function PaymentModal({
             </div>
           </div>
 
-          {/* Payment Method */}
+          {/* Payment Method Selection */}
           <div>
             <h3 className="font-medium mb-3">Payment Method</h3>
-            <div className="p-3 rounded-lg border border-blue-500 bg-blue-500/10 text-blue-400">
-              <div className="text-center">
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <button
+                onClick={() => setPaymentMethod("UPI")}
+                className={`p-3 rounded-lg border text-center transition-colors ${
+                  paymentMethod === "UPI"
+                    ? "border-blue-500 bg-blue-500/10 text-blue-400"
+                    : "border-white/20 hover:border-white/40 text-white/70"
+                }`}
+              >
                 <div className="text-lg mb-1">📱</div>
-                <div className="text-sm font-medium">UPI Payment</div>
-              </div>
+                <div className="text-sm font-medium">UPI Manual</div>
+              </button>
+              <button
+                onClick={() => setPaymentMethod("RAZORPAY")}
+                className={`p-3 rounded-lg border text-center transition-colors ${
+                  paymentMethod === "RAZORPAY"
+                    ? "border-blue-500 bg-blue-500/10 text-blue-400"
+                    : "border-white/20 hover:border-white/40 text-white/70"
+                }`}
+              >
+                <div className="text-lg mb-1">💳</div>
+                <div className="text-sm font-medium">Razorpay</div>
+              </button>
             </div>
           </div>
 
-          {/* UPI QR Code Placeholder */}
-          <div className="text-center space-y-4">
-            <div className="bg-white p-6 rounded-lg inline-block">
-              <div className="text-sm text-gray-600 mb-3">QR Code Placeholder</div>
-              <div className="w-48 h-48 bg-gray-200 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-400">
-                <div className="text-gray-500 text-center">
-                  <div className="text-4xl mb-2">📱</div>
-                  <div className="text-sm font-medium">QR Code</div>
-                  <div className="text-xs opacity-70 mt-1">Placeholder</div>
-                  <div className="text-xs opacity-70 mt-1">Amount: ₹{amount}</div>
+          {paymentMethod === "UPI" ? (
+            <>
+              {/* UPI QR Code Placeholder */}
+              <div className="text-center space-y-4">
+                <div className="bg-white p-6 rounded-lg inline-block">
+                  <div className="text-sm text-gray-600 mb-3">QR Code Placeholder</div>
+                  <div className="w-48 h-48 bg-gray-200 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-400">
+                    <div className="text-gray-500 text-center">
+                      <div className="text-4xl mb-2">📱</div>
+                      <div className="text-sm font-medium">QR Code</div>
+                      <div className="text-xs opacity-70 mt-1">Placeholder</div>
+                      <div className="text-xs opacity-70 mt-1">Amount: ₹{amount}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white/5 p-3 rounded-lg">
+                  <p className="text-sm font-medium">Pay to:</p>
+                  <p className="text-lg font-mono text-blue-400">9482907443@upi</p>
+                  <p className="text-xs opacity-70 mt-1">Use your UPI app to scan and pay</p>
                 </div>
               </div>
-            </div>
-            <div className="bg-white/5 p-3 rounded-lg">
-              <p className="text-sm font-medium">Pay to:</p>
-              <p className="text-lg font-mono text-blue-400">9482907443@upi</p>
-              <p className="text-xs opacity-70 mt-1">Use your UPI app to scan and pay</p>
-            </div>
-          </div>
 
-          {/* Transaction ID Input */}
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm mb-1">Enter UPI Transaction ID</label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 rounded border border-white/20 bg-transparent outline-none"
-                placeholder="e.g., 123456789012"
-                value={upiTransactionId}
-                onChange={(e) => setUpiTransactionId(e.target.value)}
-              />
-              <p className="text-xs opacity-70 mt-1">
-                Enter the transaction ID from your UPI app after making the payment
+              {/* Transaction ID Input */}
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm mb-1">Enter UPI Transaction ID</label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 rounded border border-white/20 bg-transparent outline-none"
+                    placeholder="e.g., 123456789012"
+                    value={upiTransactionId}
+                    onChange={(e) => setUpiTransactionId(e.target.value)}
+                  />
+                  <p className="text-xs opacity-70 mt-1">
+                    Enter the transaction ID from your UPI app after making the payment
+                  </p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="bg-white/5 p-4 rounded-lg text-center space-y-3">
+              <div className="text-3xl mb-2">💳</div>
+              <p className="text-sm text-white/80">
+                Pay securely using Credit/Debit Card, NetBanking, Wallets, or UPI via Razorpay.
               </p>
             </div>
-          </div>
+          )}
+
 
 
           {/* Error Message */}
@@ -186,13 +321,23 @@ export default function PaymentModal({
             >
               Cancel
             </button>
-            <button
-              onClick={savePayment}
-              disabled={isProcessing || !upiTransactionId.trim()}
-              className="flex-1 px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
-            >
-              {isProcessing ? "Saving..." : "Done"}
-            </button>
+            {paymentMethod === "UPI" ? (
+              <button
+                onClick={savePayment}
+                disabled={isProcessing || !upiTransactionId.trim()}
+                className="flex-1 px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+              >
+                {isProcessing ? "Saving..." : "Done"}
+              </button>
+            ) : (
+              <button
+                onClick={handleRazorpayPayment}
+                disabled={isProcessing}
+                className="flex-1 px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {isProcessing ? "Processing..." : "Pay with Razorpay"}
+              </button>
+            )}
           </div>
 
 

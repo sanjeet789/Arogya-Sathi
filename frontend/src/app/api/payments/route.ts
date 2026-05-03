@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
         status: status || "COMPLETED",
         method,
         transactionId,
-        upiId: "saswatsusmoy@upi",
+        ...(method === "UPI" ? { upiId: "saswatsusmoy@upi" } : {}),
         paidAt: new Date(),
       },
     });
