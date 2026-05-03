@@ -16,7 +16,7 @@
     "@stripe/stripe-js": "^8.0.0",
     "livekit-client": "^2.15.8",
     "livekit-server-sdk": "^2.13.3",
-    "next": "15.5.4",
+    "next": "^16.2.4",
     "prisma": "^6.19.2",
     "razorpay": "^2.9.6",
     "react": "19.1.0",
@@ -30,7 +30,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.5.4",
+    "eslint-config-next": "^16.2.4",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
