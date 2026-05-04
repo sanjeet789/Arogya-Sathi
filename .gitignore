@@ -83,7 +83,7 @@ backend/env.bak/
 backend/venv.bak/
 backend/.venv/
 
-# Environment variables
+# Environment variables.
 backend/.env
 backend/.env.local
 backend/.env.development
