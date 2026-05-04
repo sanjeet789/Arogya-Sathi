@@ -47,8 +47,8 @@ class PaymentService:
     
     def __init__(self):
         self.database_url = settings.database_url
-        self.merchant_upi_id = "saswatsusmoy@upi"
-        self.merchant_name = "AarogyaAI"
+        self.merchant_upi_id = "9482907443@upi"
+        self.merchant_name = "Aarogya-Sathi"
         self.base_url = "https://aarogyaai.com"  # Replace with actual domain
         
     async def create_payment(self, request: PaymentRequest) -> PaymentResponse:

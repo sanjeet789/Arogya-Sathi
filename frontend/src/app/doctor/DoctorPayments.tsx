@@ -86,7 +86,7 @@ export default function DoctorPayments({ username }: DoctorPaymentsProps) {
                 appointment.status === "PENDING" ? "PENDING" : "FAILED",
         method: "UPI",
         transactionId: `TXN_${appointment.id.slice(-8)}`,
-        upiId: "saswatsusmoy@upi",
+        upiId: "9482907443@upi",
         paidAt: appointment.status === "ACCEPTED" ? appointment.updatedAt : null,
         createdAt: appointment.createdAt,
         updatedAt: appointment.updatedAt,

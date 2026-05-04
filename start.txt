@@ -6,3 +6,6 @@ npm run dev
 
 
 neon:postgresql://neondb_owner:npg_NXtJ7cDPVSO0@ep-rapid-wildflower-aojmwa95.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+
+
+NEXT_PUBLIC_STT_BACKEND_URL
