@@ -30,7 +30,18 @@ export async function GET(req: NextRequest) {
       status: { not: "DECLINED" } // Exclude declined appointments
     },
     orderBy: { scheduledAt: "asc" },
-    include: { patient: { select: { username: true } }, doctor: { select: { username: true } } },
+    include: { 
+      patient: { select: { username: true } }, 
+      doctor: { 
+        select: { 
+          username: true,
+          doctorProfile: { select: { consultationFee: true } }
+        } 
+      },
+      payment: {
+        include: { logs: true }
+      }
+    },
   });
   return NextResponse.json(data);
 }

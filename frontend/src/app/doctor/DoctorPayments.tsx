@@ -36,6 +36,7 @@ type Payment = {
   doctor_username: string;
   appointment_date: string;
   appointment_reason?: string;
+  appointment_status: string;
   logs: PaymentLog[];
 };
 
@@ -58,6 +59,7 @@ export default function DoctorPayments({ username }: DoctorPaymentsProps) {
   const [error, setError] = useState<string | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [showLogs, setShowLogs] = useState(false);
+  const [filter, setFilter] = useState<"ALL" | "PAID" | "PENDING" | "COMPLETED_APPOINTMENTS">("ALL");
 
   useEffect(() => {
     if (username) {
@@ -74,28 +76,43 @@ export default function DoctorPayments({ username }: DoctorPaymentsProps) {
       if (!response.ok) throw new Error("Failed to fetch appointments");
       const appointments = await response.json();
       
-      // Convert appointments to payment format with fixed consultation fee
-      const paymentData = appointments.map((appointment: any) => ({
-        id: appointment.id,
-        appointmentId: appointment.id,
-        patientId: appointment.patientId,
-        doctorId: appointment.doctorId,
-        amount: 500, // Fixed consultation fee
-        currency: "INR",
-        status: appointment.status === "ACCEPTED" ? "COMPLETED" : 
-                appointment.status === "PENDING" ? "PENDING" : "FAILED",
-        method: "UPI",
-        transactionId: `TXN_${appointment.id.slice(-8)}`,
-        upiId: "9482907443@upi",
-        paidAt: appointment.status === "ACCEPTED" ? appointment.updatedAt : null,
-        createdAt: appointment.createdAt,
-        updatedAt: appointment.updatedAt,
-        patient_username: appointment.patient.username,
-        doctor_username: appointment.doctor.username,
-        appointment_date: appointment.scheduledAt,
-        appointment_reason: appointment.reason || "Consultation",
-        logs: [] // No logs for simplified version
-      }));
+      // Convert appointments to payment format dynamically
+      const paymentData = appointments.map((appointment: any) => {
+        const payment = appointment.payment;
+        const defaultFee = appointment.doctor?.doctorProfile?.consultationFee || 500;
+        
+        let paymentStatus = "PENDING";
+        if (payment) {
+          paymentStatus = payment.status;
+        } else if (appointment.status === "COMPLETED" || appointment.status === "ACCEPTED") {
+          // Fallback if no payment record but appointment was accepted/completed
+          paymentStatus = "COMPLETED";
+        } else if (appointment.status === "DECLINED") {
+          paymentStatus = "FAILED";
+        }
+        
+        return {
+          id: payment?.id || appointment.id,
+          appointmentId: appointment.id,
+          patientId: appointment.patientId,
+          doctorId: appointment.doctorId,
+          amount: payment?.amount || defaultFee,
+          currency: "INR",
+          status: paymentStatus,
+          method: payment?.method || "UPI",
+          transactionId: payment?.transactionId || (paymentStatus === "COMPLETED" ? `TXN_${appointment.id.slice(-8)}` : null),
+          upiId: payment?.upiId || (paymentStatus === "COMPLETED" ? "9482907443@upi" : null),
+          paidAt: payment?.paidAt || (paymentStatus === "COMPLETED" ? appointment.updatedAt : null),
+          createdAt: payment?.createdAt || appointment.createdAt,
+          updatedAt: payment?.updatedAt || appointment.updatedAt,
+          patient_username: appointment.patient?.username || "Unknown",
+          doctor_username: appointment.doctor?.username || "Unknown",
+          appointment_date: appointment.scheduledAt,
+          appointment_reason: appointment.reason || "Consultation",
+          appointment_status: appointment.status,
+          logs: payment?.logs || []
+        };
+      });
       
       setPayments(paymentData);
     } catch (err) {
@@ -114,17 +131,31 @@ export default function DoctorPayments({ username }: DoctorPaymentsProps) {
       if (!response.ok) throw new Error("Failed to fetch appointments");
       const appointments = await response.json();
       
-      // Calculate statistics from appointments
+      let totalAmount = 0;
+      let successfulPayments = 0;
+      let failedPayments = 0;
+      
+      appointments.forEach((apt: any) => {
+        const payment = apt.payment;
+        if (payment && payment.status === "COMPLETED") {
+           totalAmount += payment.amount;
+           successfulPayments++;
+        } else if (!payment && (apt.status === "COMPLETED" || apt.status === "ACCEPTED")) {
+           totalAmount += (apt.doctor?.doctorProfile?.consultationFee || 500);
+           successfulPayments++;
+        } else if (apt.status === "DECLINED" || (payment && payment.status === "FAILED")) {
+           failedPayments++;
+        }
+      });
+      
       const totalAppointments = appointments.length;
-      const acceptedAppointments = appointments.filter((apt: any) => apt.status === "ACCEPTED");
-      const totalAmount = acceptedAppointments.length * 500; // 500 per consultation
-      const averageAmount = totalAppointments > 0 ? totalAmount / totalAppointments : 0;
+      const averageAmount = successfulPayments > 0 ? totalAmount / successfulPayments : 0;
       
       const statsData = {
         total_payments: totalAppointments,
         total_amount: totalAmount,
-        successful_payments: acceptedAppointments.length,
-        failed_payments: appointments.filter((apt: any) => apt.status === "DECLINED").length,
+        successful_payments: successfulPayments,
+        failed_payments: failedPayments,
         average_amount: averageAmount
       };
       
@@ -203,6 +234,14 @@ export default function DoctorPayments({ username }: DoctorPaymentsProps) {
     );
   }
 
+  const filteredPayments = payments.filter(p => {
+    if (filter === "ALL") return true;
+    if (filter === "PAID") return p.status === "COMPLETED";
+    if (filter === "PENDING") return p.status === "PENDING";
+    if (filter === "COMPLETED_APPOINTMENTS") return p.appointment_status === "COMPLETED";
+    return true;
+  });
+
   return (
     <div className="space-y-6">
       {/* Statistics Cards */}
@@ -237,11 +276,21 @@ export default function DoctorPayments({ username }: DoctorPaymentsProps) {
 
       {/* Payments Table */}
       <div className="border border-white/10 rounded-lg overflow-hidden">
-        <div className="p-4 border-b border-white/10">
+        <div className="p-4 border-b border-white/10 flex justify-between items-center">
           <h3 className="font-medium">Payment History</h3>
+          <select 
+            value={filter} 
+            onChange={(e) => setFilter(e.target.value as any)}
+            className="px-3 py-1 bg-background border border-white/20 rounded text-sm outline-none cursor-pointer"
+          >
+            <option value="ALL">ALL</option>
+            <option value="PAID">PAID</option>
+            <option value="PENDING">PENDING</option>
+            <option value="COMPLETED_APPOINTMENTS">COMPLETED APPOINTMENTS</option>
+          </select>
         </div>
         
-        {payments.length === 0 ? (
+        {filteredPayments.length === 0 ? (
           <div className="p-8 text-center text-sm opacity-70">
             No payments found
           </div>
@@ -259,7 +308,7 @@ export default function DoctorPayments({ username }: DoctorPaymentsProps) {
                 </tr>
               </thead>
               <tbody>
-                {payments.map((payment) => (
+                {filteredPayments.map((payment) => (
                   <tr key={payment.id} className="border-b border-white/5 hover:bg-white/5">
                     <td className="p-4">
                       <div>
@@ -292,9 +341,16 @@ export default function DoctorPayments({ username }: DoctorPaymentsProps) {
                       )}
                     </td>
                     <td className="p-4">
-                      <span className={`px-2 py-1 rounded text-xs border ${getStatusColor(payment.status)}`}>
-                        {payment.status}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className={`px-2 py-1 rounded text-xs border inline-block w-fit ${getStatusColor(payment.status)}`}>
+                          {payment.status}
+                        </span>
+                        {payment.appointment_status && (
+                          <span className="text-[10px] opacity-70 px-1 py-0.5 border border-white/20 rounded inline-block w-fit">
+                            Apt: {payment.appointment_status}
+                          </span>
+                        )}
+                      </div>
                       {payment.paidAt && (
                         <div className="text-xs opacity-70 mt-1">
                           Paid: {formatDate(payment.paidAt)}
